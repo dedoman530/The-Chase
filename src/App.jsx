@@ -4,16 +4,20 @@ import CashBuilder from "./components/CashBuilder";
 import Results from "./components/Results";
 import TeamSetup from "./components/TeamSetup";
 import TitleScreen from "./components/TitleScreen";
+import Intermission from "./components/Intermission";
+import Chase from "./components/Chase";
 
 export default function App() {
   const [teams, setTeams] = useState([]);
-  const [screen, setScreen] = useState("title"); // "title, "setup", "cash", "results", "end"
+  const [finalRankings, setFinalRankings] = useState(null);
+  const [screen, setScreen] = useState("title"); // "title, "setup", "cash", "results", "intermission", "chase"
 
   function startGame() {
     setScreen("setup");
   }
 
   function handleCreateTeam(name) {
+    setFinalRankings(null);
     setTeams((prev) => [...prev, createTeam(name)]);
     setScreen("cash");
   }
@@ -35,6 +39,7 @@ export default function App() {
   }
 
   function handleAddAnotherTeam() {
+    setFinalRankings(null);
     setScreen("setup");
   }
 
@@ -44,7 +49,16 @@ export default function App() {
   }
 
   function handleEndGame() {
-    setScreen("end");
+    setScreen("intermission");
+  }
+
+  function handleIntermissionNext() {
+    setScreen("chase");
+  }
+
+  function handleChaseEnd(rankings) {
+    setFinalRankings(rankings);
+    setScreen("results");
   }
 
   const currentTeam = teams[teams.length - 1] || null;
@@ -53,7 +67,13 @@ export default function App() {
     <div>
       {screen === "title" && <TitleScreen onPlay={startGame} />}
 
-      {screen === "setup" && <TeamSetup onSubmit={handleCreateTeam} />}
+      {screen === "setup" && (
+        <TeamSetup
+          teams={teams}
+          onSubmit={handleCreateTeam}
+          onEnd={handleEndGame}
+        />
+      )}
 
       {screen === "cash" && currentTeam && (
         <CashBuilder
@@ -63,25 +83,20 @@ export default function App() {
         />
       )}
 
-      {screen === "results" && currentTeam && (
+      {screen === "results" && (currentTeam || finalRankings) && (
         <Results
           team={currentTeam}
           result={currentTeam}
+          rankings={finalRankings}
           onAddAnotherTeam={handleAddAnotherTeam}
-          onEndGame={handleEndGame}
         />
       )}
 
-      {screen === "end" && (
-        <div>
-          <h1>End of Cash Builder phase!</h1>
-          {teams.map((t, i) => (
-            <p key={i}>
-              {t.name}: {t.score}
-            </p>
-          ))}
-        </div>
+      {screen === "intermission" && (
+        <Intermission onNext={handleIntermissionNext} />
       )}
+
+      {screen === "chase" && <Chase teams={teams} onEndGame={handleChaseEnd} />}
     </div>
   );
 }

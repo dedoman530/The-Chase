@@ -1,14 +1,109 @@
-export default function Results({ team, result, onAddAnotherTeam, onEndGame }) {
+import { useEffect, useRef } from "react";
+import applause from "../assets/audio/applause.mp3";
+
+export default function Results({ team, result, rankings = [], onAddAnotherTeam }) {
+  const applauseRef = useRef(null);
+  const showRankings = rankings && rankings.length > 0;
+
+  useEffect(() => {
+    const audio = new Audio(applause);
+    audio.volume = 0.5;
+    applauseRef.current = audio;
+    audio.play().catch(() => {});
+    return () => {
+      audio.pause();
+      applauseRef.current = null;
+    };
+  }, []);
+
   return (
-    <div>
-      <h1>{team.name} — Results</h1>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0c1c2e",
+        color: "#e8f1ff",
+        fontFamily:
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        padding: "24px",
+      }}
+    >
+      <div
+        style={{
+          background: "rgba(255, 255, 255, 0.05)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          borderRadius: "16px",
+          padding: "32px 36px",
+          boxShadow: "0 15px 40px rgba(0, 0, 0, 0.35)",
+          width: "min(540px, 100%)",
+          textAlign: "center",
+        }}
+      >
+        <h1 style={{ margin: "0 0 16px", fontSize: "32px" }}>
+          {showRankings ? "Final Results" : `Results - ${team?.name || ""}`}
+        </h1>
 
-      <h2>Correct Answers: {result.correct}</h2>
-      <h2>Incorrect Answers: {result.incorrect}</h2>
-      <h2>Total Cash: ${result.score}</h2>
+        {showRankings ? (
+          <div style={{ display: "grid", gap: "10px", marginBottom: "20px" }}>
+            {rankings.map((entry, idx) => (
+              <div
+                key={`${entry.name}-${idx}`}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  fontSize: "18px",
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>
+                  #{idx + 1} {entry.name}
+                </span>
+                <span style={{ opacity: 0.8 }}>
+                  {entry.position >= 11 ? "Reached finish" : `Space: ${entry.position}`}
+                  {entry.eliminated ? " (eliminated)" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: "8px",
+              marginBottom: "20px",
+              fontSize: "20px",
+            }}
+          >
+            <span>Correct Answers: {result?.correct ?? 0}</span>
+            <span>Incorrect Answers: {result?.incorrect ?? 0}</span>
+            <span>Cash Earned: ${result?.score ?? 0}</span>
+          </div>
+        )}
 
-      <button onClick={onAddAnotherTeam}>Add Another Team</button>
-      <button onClick={onEndGame}>End Game</button>
+        {!showRankings && (
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              onClick={onAddAnotherTeam}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "12px",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                background: "#123253",
+                color: "#e8f1ff",
+                cursor: "pointer",
+                fontSize: "15px",
+              }}
+            >
+              Add Another Team
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

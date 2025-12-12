@@ -1,8 +1,7 @@
 export default function PauseModal({
   open,
   phase = "cash",
-  title = "Paused",
-  message = "Pick what you want to do.",
+  title = "PAUSED",
   onResume,
   onRestart,
   onExit,
@@ -40,18 +39,16 @@ export default function PauseModal({
           borderRadius: "16px",
           boxShadow: "0 20px 50px rgba(0, 0, 0, 0.45)",
           padding: "24px",
-          fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily:
+            "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
           color: "#e8f1ff",
         }}
       >
-        <h2 style={{ fontSize: "26px", margin: "0 0 12px" }}>
+        <h2
+          style={{ fontSize: "26px", margin: "0 0 12px", textAlign: "center" }}
+        >
           {title || `${phase} paused`}
         </h2>
-        {message && (
-          <p style={{ margin: "0 0 20px", lineHeight: 1.5, color: "#c7d5e5" }}>
-            {message}
-          </p>
-        )}
         <div
           style={{
             display: "grid",
