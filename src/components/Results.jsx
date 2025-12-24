@@ -1,18 +1,22 @@
 import { useEffect, useRef } from "react";
 import applause from "../assets/audio/applause.mp3";
+import { playSfx, preloadSounds, stopSource } from "../audio/audioEngine";
 
 export default function Results({ team, result, rankings = [], onAddAnotherTeam }) {
   const applauseRef = useRef(null);
   const showRankings = rankings && rankings.length > 0;
+  const APPLAUSE_KEY = "results-applause";
 
   useEffect(() => {
-    const audio = new Audio(applause);
-    audio.volume = 0.5;
-    applauseRef.current = audio;
-    audio.play().catch(() => {});
+    void preloadSounds([{ key: APPLAUSE_KEY, url: applause }]);
+    void playSfx(APPLAUSE_KEY, applause, { volume: 0.5 }).then((node) => {
+      applauseRef.current = node?.source || null;
+    });
     return () => {
-      audio.pause();
-      applauseRef.current = null;
+      if (applauseRef.current) {
+        stopSource(applauseRef.current);
+        applauseRef.current = null;
+      }
     };
   }, []);
 

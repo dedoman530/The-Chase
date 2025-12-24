@@ -1,4 +1,7 @@
+import packageJson from "../../package.json";
+
 export default function TitleScreen({ onPlay }) {
+  const appVersion = packageJson?.version ? `v${packageJson.version}` : "";
   return (
     <div
       style={{
@@ -26,6 +29,18 @@ export default function TitleScreen({ onPlay }) {
         }}
       >
         <h1 style={{ fontSize: "48px", margin: "0 0 16px" }}>The Chase</h1>
+        {appVersion && (
+          <div
+            style={{
+              marginBottom: "16px",
+              fontSize: "14px",
+              letterSpacing: "0.6px",
+              opacity: 0.7,
+            }}
+          >
+            {appVersion}
+          </div>
+        )}
         <button
           onClick={onPlay}
           style={{

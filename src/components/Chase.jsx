@@ -11,6 +11,7 @@ import track08 from "../assets/audio/08 - SV.mp3";
 import track09 from "../assets/audio/09 - Melee.mp3";
 import track10 from "../assets/audio/10 - HoMK.mp3";
 import correctSound from "../assets/audio/Correct.mp3";
+import { playSfx, preloadSounds, stopSource } from "../audio/audioEngine";
 
 function getPositionFromCash(score) {
   const spaces = 11;
@@ -41,6 +42,8 @@ export default function Chase({ teams, onEndGame }) {
     track09,
     track10,
   ];
+  const QUESTION_KEYS = QUESTION_TRACKS.map((_, idx) => `chase-track-${idx}`);
+  const SUBMIT_KEY = "chase-submit";
   const spaces = 11;
   const boardDocked = started;
   const gridPaddingX = boardDocked ? 40 : 70;
@@ -80,10 +83,10 @@ export default function Chase({ teams, onEndGame }) {
     stopQuestionAudio();
     const track = QUESTION_TRACKS[questionIndex % QUESTION_TRACKS.length];
     if (track) {
-      const audio = new Audio(track);
-      questionAudioRef.current = audio;
-      audio.volume = 0.25;
-      audio.play().catch(() => {});
+      const key = QUESTION_KEYS[questionIndex % QUESTION_KEYS.length];
+      void playSfx(key, track, { volume: 0.25 }).then((node) => {
+        questionAudioRef.current = node?.source || null;
+      });
     }
   }, [started, questionIndex]);
 
@@ -152,8 +155,7 @@ export default function Chase({ teams, onEndGame }) {
 
   function stopQuestionAudio() {
     if (questionAudioRef.current) {
-      questionAudioRef.current.pause();
-      questionAudioRef.current.currentTime = 0;
+      stopSource(questionAudioRef.current);
       questionAudioRef.current = null;
     }
   }
@@ -163,9 +165,7 @@ export default function Chase({ teams, onEndGame }) {
       return;
     if (!allAnswered) return;
     stopQuestionAudio();
-    const submitSound = new Audio(correctSound);
-    submitSound.volume = 0.5;
-    submitSound.play().catch(() => {});
+    void playSfx(SUBMIT_KEY, correctSound, { volume: 0.5 });
     const correctIndex = currentQuestion.correctIndex;
     setShowAnswer(true);
     let nextWinner = null;
@@ -218,6 +218,12 @@ export default function Chase({ teams, onEndGame }) {
   }
 
   useEffect(() => {
+    void preloadSounds(
+      QUESTION_TRACKS.map((track, idx) => ({
+        key: QUESTION_KEYS[idx],
+        url: track,
+      })).concat({ key: SUBMIT_KEY, url: correctSound })
+    );
     return () => {
       stopQuestionAudio();
     };

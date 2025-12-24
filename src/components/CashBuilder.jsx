@@ -5,6 +5,13 @@ import finishSound from "../assets/audio/Finish.mp3";
 import countdownSound from "../assets/audio/Countdown.mp3";
 import correctSound from "../assets/audio/Points.mp3";
 import oofSound from "../assets/audio/oof.mp3";
+import {
+  playLoop,
+  playSfx,
+  preloadSounds,
+  stopLoop,
+  stopSource,
+} from "../audio/audioEngine";
 
 const INITIAL_TIME_MS = 60000;
 
@@ -21,46 +28,52 @@ export default function CashBuilder({ team, onFinish, onExit }) {
   const [showFinishOverlay, setShowFinishOverlay] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
-  const audioRef = useRef(null);
-  const countdownAudioRef = useRef(null);
-  const finishAudioRef = useRef(null);
   const finishTimeoutRef = useRef(null);
-  const correctAudioRef = useRef(null);
-  const incorrectAudioRef = useRef(null);
+  const countdownSourceRef = useRef(null);
+  const finishSourceRef = useRef(null);
+
+  const MUSIC_KEY = "cash-builder-theme";
+  const COUNTDOWN_KEY = "cash-builder-countdown";
+  const FINISH_KEY = "cash-builder-finish";
+  const CORRECT_KEY = "cash-builder-correct";
+  const OOF_KEY = "cash-builder-oof";
 
   const cash = correctCount * 100;
   const minutes = Math.floor(timeMs / 60000);
   const seconds = Math.floor((timeMs % 60000) / 1000);
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const shouldPlayMusic = !isPaused && timeMs > 0 && !isCountingDown;
 
   useEffect(() => {
-    const audio = new Audio(music);
-    audio.loop = true;
-    audio.volume = 0.15;
-    audioRef.current = audio;
+    void preloadSounds([
+      { key: MUSIC_KEY, url: music },
+      { key: COUNTDOWN_KEY, url: countdownSound },
+      { key: FINISH_KEY, url: finishSound },
+      { key: CORRECT_KEY, url: correctSound },
+      { key: OOF_KEY, url: oofSound },
+    ]);
     return () => {
-      audio.pause();
-      audioRef.current = null;
+      stopLoop(MUSIC_KEY);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!audioRef.current) return;
-    if (isPaused || timeMs <= 0 || isCountingDown) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {});
+    if (!shouldPlayMusic) {
+      stopLoop(MUSIC_KEY);
+      return;
     }
-  }, [isPaused, timeMs, isCountingDown]);
+    void playLoop(MUSIC_KEY, music, { volume: 0.15 });
+  }, [shouldPlayMusic]);
 
   useEffect(() => {
     if (!isCountingDown) return;
     setCountdownValue(3);
-    const countdownAudio = new Audio(countdownSound);
-    countdownAudioRef.current = countdownAudio;
-    countdownAudio.volume = 0.2;
-    countdownAudio.play().catch(() => {});
+    void playSfx(COUNTDOWN_KEY, countdownSound, { volume: 0.2 }).then(
+      (node) => {
+        countdownSourceRef.current = node?.source || null;
+      }
+    );
 
     const interval = setInterval(() => {
       setCountdownValue((prev) => {
@@ -89,11 +102,10 @@ export default function CashBuilder({ team, onFinish, onExit }) {
     if (timeMs > 0 || hasFinished) return;
     setHasFinished(true);
     setShowFinishOverlay(true);
-    if (audioRef.current) audioRef.current.pause();
-    const finishAudio = new Audio(finishSound);
-    finishAudio.volume = 0.5;
-    finishAudioRef.current = finishAudio;
-    finishAudio.play().catch(() => {});
+    stopLoop(MUSIC_KEY);
+    void playSfx(FINISH_KEY, finishSound, { volume: 0.5 }).then((node) => {
+      finishSourceRef.current = node?.source || null;
+    });
     finishTimeoutRef.current = setTimeout(() => {
       setShowFinishOverlay(false);
       onFinish({
@@ -136,14 +148,12 @@ export default function CashBuilder({ team, onFinish, onExit }) {
     setIsPaused(false);
     setCountdownValue(3);
     setIsCountingDown(true);
-    resetAudio(true);
   }
 
   function handleExit() {
     setShowPauseModal(false);
     setIsPaused(true);
     clearFinishEffects();
-    resetAudio(false);
     onExit();
   }
 
@@ -155,12 +165,7 @@ export default function CashBuilder({ team, onFinish, onExit }) {
 
   function handleCorrect() {
     setCorrectCount((c) => c + 1);
-    if (!correctAudioRef.current) {
-      correctAudioRef.current = new Audio(correctSound);
-      correctAudioRef.current.volume = 0.5;
-    }
-    correctAudioRef.current.currentTime = 0;
-    correctAudioRef.current.play().catch(() => {});
+    void playSfx(CORRECT_KEY, correctSound, { volume: 0.5 });
     const id = crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random()}`;
@@ -184,33 +189,18 @@ export default function CashBuilder({ team, onFinish, onExit }) {
     }, 700);
   }
 
-  function resetAudio(shouldPlay) {
-    if (!audioRef.current) return;
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    if (shouldPlay && !isCountingDown) {
-      audioRef.current.play().catch(() => {});
-    }
-  }
-
   function playIncorrectSound() {
-    if (!incorrectAudioRef.current) {
-      incorrectAudioRef.current = new Audio(oofSound);
-      incorrectAudioRef.current.volume = 0.5;
-    }
-    const base = incorrectAudioRef.current;
-    base.currentTime = 0;
-    base.play().catch(() => {});
-    const extra = new Audio(oofSound);
-    extra.volume = 0.5;
-    extra.play().catch(() => {});
+    void playSfx(OOF_KEY, oofSound, { volume: 0.5 });
+    void playSfx(OOF_KEY, oofSound, { volume: 0.5 });
   }
 
   function clearFinishEffects() {
     if (finishTimeoutRef.current) clearTimeout(finishTimeoutRef.current);
     finishTimeoutRef.current = null;
-    if (finishAudioRef.current) finishAudioRef.current.pause();
-    finishAudioRef.current = null;
+    if (finishSourceRef.current) {
+      stopSource(finishSourceRef.current);
+      finishSourceRef.current = null;
+    }
     setShowFinishOverlay(false);
     setHasFinished(false);
   }
@@ -218,9 +208,9 @@ export default function CashBuilder({ team, onFinish, onExit }) {
   useEffect(() => {
     return () => {
       clearFinishEffects();
-      if (countdownAudioRef.current) {
-        countdownAudioRef.current.pause();
-        countdownAudioRef.current.currentTime = 0;
+      if (countdownSourceRef.current) {
+        stopSource(countdownSourceRef.current);
+        countdownSourceRef.current = null;
       }
     };
   }, []);
